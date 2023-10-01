@@ -58,9 +58,9 @@ class swift():
 		#initial setting of Kp, Kd and ki for [roll, pitch, throttle]. eg: self.Kp[2] corresponds to Kp value in throttle axis
 		#after tuning and computing corresponding PID parameters, change the parameters
 
-		self.Kp = [0, 0, 0]
-		self.Ki = [0, 0, 0]
-		self.Kd = [0, 0, 0]
+		self.Kp = [0, 0, 49.65]
+		self.Ki = [0, 0, 0.016]
+		self.Kd = [0, 0, 321]
    
 		#-----------------------Add other required variables for pid here ----------------------------------------------
 
