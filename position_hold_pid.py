@@ -58,13 +58,13 @@ class swift():
 		#initial setting of Kp, Kd and ki for [roll, pitch, throttle]. eg: self.Kp[2] corresponds to Kp value in throttle axis
 		#after tuning and computing corresponding PID parameters, change the parameters
 
-		self.Kp = [0, 0, 0]
-		self.Ki = [0, 0, 0]
-		self.Kd = [0, 0, 0]
+		self.Kp = [5.358, 8.52, 180.26]
+		self.Ki = [0, 0, 0.0126]
+		self.Kd = [11.18, 0, 990.8]
    
 		#-----------------------Add other required variables for pid here ----------------------------------------------
 
-		
+		self.zero = 0.0
 
 		self.alt_error = 0.0
 		self.pitch_error = 0.0
@@ -102,8 +102,10 @@ class swift():
 		self.command_pub = rospy.Publisher('/drone_command', swift_msgs, queue_size=1)
 
 		self.alt_error_pub = rospy.Publisher('/alt_error', Float64, queue_size=1)
-		#self.pitch_error_pub = rospy.Publisher('/pitch_error', Float64, queue_size=1)
-		#self.roll_error_pub = rospy.Publisher('/roll_error', Float64, queue_size=1)
+		self.zero_pub = rospy.Publisher('/zero', Float64, queue_size=1)
+		
+		self.pitch_error_pub = rospy.Publisher('/pitch_error', Float64, queue_size=1)
+		self.roll_error_pub = rospy.Publisher('/roll_error', Float64, queue_size=1)
 		#
 		#------------------------Add other ROS Publishers here-----------------------------------------------------
 
@@ -119,8 +121,8 @@ class swift():
 		rospy.Subscriber('whycon/poses', PoseArray, self.whycon_callback)
 		rospy.Subscriber('/pid_tuning_altitude',PidTune,self.altitude_set_pid)
 
-		#rospy.Subscriber('/pid_tuning_roll',PidTune,self.roll_set_pid)
-		#rospy.Subscriber('/pid_tuning_pitch',PidTune,self.pitch_set_pid)
+		rospy.Subscriber('/pid_tuning_roll',PidTune,self.roll_set_pid)
+		rospy.Subscriber('/pid_tuning_pitch',PidTune,self.pitch_set_pid)
 		#-------------------------Add other ROS Subscribers here----------------------------------------------------
 
 
@@ -173,16 +175,18 @@ class swift():
 		self.Kp[2] = alt.Kp * 0.06 # This is just for an example. You can change the ratio/fraction value accordingly
 		self.Ki[2] = alt.Ki * 0.0008
 		self.Kd[2] = alt.Kd * 0.3
-	
+		
+		
+		
 
 	def roll_set_pid(self,roll):
 		self.Kp[0] = roll.Kp * 0.06 # This is just for an example. You can change the ratio/fraction value accordingly
 		self.Ki[0] = roll.Ki * 0.0008
 		self.Kd[0] = roll.Kd * 0.3
 	def pitch_set_pid(self,pitch):
-		self.Kp[1] = pitch.Kp * 0.06 # This is just for an example. You can change the ratio/fraction value accordingly
-		self.Ki[1] = pitch.Ki * 0.0008
-		self.Kd[1] = pitch.Kd * 0.3
+		self.Kp[1] = pitch.Kp * 0.006 # This is just for an example. You can change the ratio/fraction value accordingly
+		self.Ki[1] = pitch.Ki * 0.00008
+		self.Kd[1] = pitch.Kd * 0.03
 	
 		
 	#----------------------------Define callback function like altitide_set_pid to tune pitch, roll--------------
@@ -221,19 +225,19 @@ class swift():
 			
 
 			self.alt_error = self.drone_position[2] - self.setpoint[2]
-			#self.pitch_error =  self.drone_position[1] - self.setpoint[1]
-			#self.roll_error = self.drone_position[0] - self.setpoint[0]
+			self.pitch_error =  self.drone_position[1] - self.setpoint[1]
+			self.roll_error = self.drone_position[0] - self.setpoint[0]
 		
-			self.cmd.rcThrottle = int(1500 + (self.alt_error*self.Kp[2]) + ((self.alt_error - self.prev_alt_error)*self.Kd[2]) + (self.sum_alt_error+self.alt_error)*self.Ki[2])
-			#self.cmd.rcPitch = int(1590 + (self.pitch_error*self.Kp[1]) + ((self.pitch_error - self.prev_pitch_error)*self.Kd[1]) + (self.sum_pitch_error)*self.Ki[1])
-			#self.cmd.rcRoll = int(1590 + (self.roll_error*self.Kp[0]) + ((self.roll_error - self.prev_roll_error)*self.Kd[0]) + (self.sum_roll_error)*self.Ki[0])
+			self.cmd.rcThrottle = int(1570 + (self.alt_error*self.Kp[2]) + ((self.alt_error - self.prev_alt_error)*self.Kd[2]) + (self.sum_alt_error+self.alt_error)*self.Ki[2])
+			self.cmd.rcPitch = int(1500 + (self.pitch_error*self.Kp[1]) + ((self.pitch_error - self.prev_pitch_error)*self.Kd[1]) + (self.sum_pitch_error)*self.Ki[1])
+			self.cmd.rcRoll = int(1500 - (self.roll_error*self.Kp[0]) - ((self.roll_error - self.prev_roll_error)*self.Kd[0]) )
 
 
 			if self.cmd.rcThrottle > self.max_values[2]:
 				self.cmd.rcThrottle = self.max_values[2]
 			if self.cmd.rcThrottle < self.min_values[2]:
 				self.cmd.rcThrottle = self.min_values[2]
-			'''
+			
 			if self.cmd.rcPitch > self.max_values[1]:
 				self.cmd.rcPitch = self.max_values[1]
 			if self.cmd.rcPitch < self.min_values[1]:
@@ -244,21 +248,22 @@ class swift():
 			if self.cmd.rcRoll < self.min_values[0]:
 				self.cmd.rcRoll = self.min_values[0]	
 
-			'''
+			
 
 			self.prev_alt_error = self.alt_error
-			#self.prev_pitch_error = self.pitch_error
-			#self.prev_roll_error = self.roll_error
+			self.prev_pitch_error = self.pitch_error
+			self.prev_roll_error = self.roll_error
 
 			self.sum_alt_error  = self.sum_alt_error + self.alt_error
-			#self.sum_pitch_error  = self.sum_pitch_error + self.pitch_error
-			#self.sum_roll_error  = self.sum_roll_error + self.roll_error
+			self.sum_pitch_error  = self.sum_pitch_error + self.pitch_error
+			self.sum_roll_error  = self.sum_roll_error + self.roll_error
 
 			self.command_pub.publish(self.cmd)
 		
 			self.alt_error_pub.publish(self.alt_error)
-			#self.pitch_error_pub.publish(self.pitch_error)
-			#self.roll_error_pub.publish(self.roll_error)
+			self.zero_pub.publish(self.zero)
+			self.pitch_error_pub.publish(self.pitch_error)
+			self.roll_error_pub.publish(self.roll_error)
 		
 		
 		
@@ -300,3 +305,5 @@ if __name__ == '__main__':
 	while not rospy.is_shutdown():
 		swift_drone.pid()
 		r.sleep()
+
+
