@@ -59,12 +59,14 @@ class swift():
 		#after tuning and computing corresponding PID parameters, change the parameters
 
 		self.Kp = [5.358, 8.52, 21.84]
-		self.Ki = [0, 0, 0.0112]
+		self.Ki = [0, 0, 0.0136]
 		self.Kd = [11.18, 0, 596.1]
    
 		#-----------------------Add other required variables for pid here ----------------------------------------------
 
 		self.zero = 0.0
+		self.upper_limit = 0.2
+		self.lower_limit = -0.2
 
 		self.alt_error = 0.0
 		self.pitch_error = 0.0
@@ -103,6 +105,8 @@ class swift():
 
 		self.alt_error_pub = rospy.Publisher('/alt_error', Float64, queue_size=1)
 		self.zero_pub = rospy.Publisher('/zero', Float64, queue_size=1)
+		self.upper_limit_pub = rospy.Publisher('/upper_limit', Float64, queue_size=1)
+		self.lower_limit_pub = rospy.Publisher('/lower_limit', Float64, queue_size=1)
 		
 		self.pitch_error_pub = rospy.Publisher('/pitch_error', Float64, queue_size=1)
 		self.roll_error_pub = rospy.Publisher('/roll_error', Float64, queue_size=1)
@@ -228,7 +232,7 @@ class swift():
 			self.pitch_error =  self.drone_position[1] - self.setpoint[1]
 			self.roll_error = self.drone_position[0] - self.setpoint[0]
 		
-			self.cmd.rcThrottle = int(1572 + (self.alt_error*self.Kp[2]) + ((self.alt_error - self.prev_alt_error)*self.Kd[2]) + (self.sum_alt_error+self.alt_error)*self.Ki[2])
+			self.cmd.rcThrottle = int(1576 + (self.alt_error*self.Kp[2]) + ((self.alt_error - self.prev_alt_error)*self.Kd[2]) + (self.sum_alt_error)*self.Ki[2])
 			self.cmd.rcPitch = int(1500 + (self.pitch_error*self.Kp[1]) + ((self.pitch_error - self.prev_pitch_error)*self.Kd[1]) + (self.sum_pitch_error)*self.Ki[1])
 			self.cmd.rcRoll = int(1500 - (self.roll_error*self.Kp[0]) - ((self.roll_error - self.prev_roll_error)*self.Kd[0]) )
 
@@ -262,6 +266,11 @@ class swift():
 		
 			self.alt_error_pub.publish(self.alt_error)
 			self.zero_pub.publish(self.zero)
+			self.upper_limit_pub.publish(self.upper_limit)
+			self.lower_limit_pub.publish(self.lower_limit)
+			
+			
+			
 			self.pitch_error_pub.publish(self.pitch_error)
 			self.roll_error_pub.publish(self.roll_error)
 		
@@ -305,6 +314,3 @@ if __name__ == '__main__':
 	while not rospy.is_shutdown():
 		swift_drone.pid()
 		r.sleep()
-
-
-
